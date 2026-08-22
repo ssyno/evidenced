@@ -6,7 +6,8 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/ssyno/evidenced/internal/evidence"
+	"github.com/ssyno/evidenced/evidence"
+	"github.com/ssyno/evidenced/mapping"
 )
 
 // TargetTypeCollectorRun is the target type of records that document a
@@ -19,7 +20,7 @@ const TargetTypeCollectorRun = "evidenced/collector-run"
 type Scheduler struct {
 	Registry *Registry
 	Store    Store
-	Mapping  *Mapping
+	Mapping  *mapping.Mapping
 	Interval time.Duration
 	Clock    func() time.Time // defaults to time.Now
 	Log      *slog.Logger     // defaults to slog.Default

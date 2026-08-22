@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/ssyno/evidenced/internal/core"
-	"github.com/ssyno/evidenced/internal/evidence"
+	"github.com/ssyno/evidenced/evidence"
 )
 
 const (

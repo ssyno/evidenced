@@ -11,7 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
-	"github.com/ssyno/evidenced/internal/evidence"
+	"github.com/ssyno/evidenced/evidence"
 )
 
 func podSpec(images ...string) corev1.PodSpec {

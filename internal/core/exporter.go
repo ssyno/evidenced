@@ -2,9 +2,6 @@ package core
 
 import (
 	"crypto/ed25519"
-	"crypto/sha256"
-	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -13,7 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ssyno/evidenced/internal/evidence"
+	"github.com/ssyno/evidenced/bundle"
+	"github.com/ssyno/evidenced/evidence"
+	"github.com/ssyno/evidenced/mapping"
 )
 
 // Exporter produces auditor-ready bundles: the machine-readable evidence
@@ -21,25 +20,9 @@ import (
 // signed) manifest covering both.
 type Exporter struct {
 	Store   Store
-	Mapping *Mapping
+	Mapping *mapping.Mapping
 	Key     ed25519.PrivateKey // optional; nil means checksum-only
 	Clock   func() time.Time   // defaults to time.Now
-}
-
-// Bundle metadata written at the top of evidence.json.
-type bundleHeader struct {
-	Tool        string            `json:"tool"`
-	Framework   string            `json:"framework"`
-	GeneratedAt time.Time         `json:"generatedAt"`
-	RecordCount int               `json:"recordCount"`
-	Records     []evidence.Record `json:"records"`
-}
-
-type manifest struct {
-	GeneratedAt time.Time         `json:"generatedAt"`
-	Files       map[string]string `json:"files"`               // name -> sha256 hex
-	PublicKey   string            `json:"publicKey,omitempty"` // base64 ed25519
-	Signature   string            `json:"signature,omitempty"` // base64 over canonical files JSON
 }
 
 func (e *Exporter) now() time.Time {
@@ -68,7 +51,7 @@ func (e *Exporter) Export(dir string) (string, error) {
 
 	files := map[string][]byte{}
 
-	header := bundleHeader{
+	header := bundle.Header{
 		Tool:        "evidenced",
 		Framework:   e.frameworkName(),
 		GeneratedAt: now,
@@ -82,18 +65,9 @@ func (e *Exporter) Export(dir string) (string, error) {
 	files["evidence.json"] = machineJSON
 	files["report.md"] = e.renderReport(records, now)
 
-	man := manifest{GeneratedAt: now, Files: map[string]string{}}
-	for name, content := range files {
-		sum := sha256.Sum256(content)
-		man.Files[name] = hex.EncodeToString(sum[:])
-	}
-	if e.Key != nil {
-		signed, err := json.Marshal(man.Files)
-		if err != nil {
-			return "", fmt.Errorf("encode manifest for signing: %w", err)
-		}
-		man.Signature = base64.StdEncoding.EncodeToString(ed25519.Sign(e.Key, signed))
-		man.PublicKey = base64.StdEncoding.EncodeToString(e.Key.Public().(ed25519.PublicKey))
+	man, err := bundle.BuildManifest(files, e.Key, now)
+	if err != nil {
+		return "", err
 	}
 	manifestJSON, err := json.MarshalIndent(man, "", "  ")
 	if err != nil {
@@ -114,48 +88,6 @@ func (e *Exporter) frameworkName() string {
 		return ""
 	}
 	return e.Mapping.Framework
-}
-
-// VerifyBundle recomputes the checksums in a bundle's manifest and, when
-// the manifest is signed, verifies the signature. Auditors can run this
-// independently via `evidenced verify-bundle`.
-func VerifyBundle(bundleDir string) error {
-	b, err := os.ReadFile(filepath.Join(bundleDir, "manifest.json")) // #nosec G304 -- user-chosen bundle dir
-	if err != nil {
-		return fmt.Errorf("read manifest: %w", err)
-	}
-	var man manifest
-	if err := json.Unmarshal(b, &man); err != nil {
-		return fmt.Errorf("parse manifest: %w", err)
-	}
-	for name, want := range man.Files {
-		content, err := os.ReadFile(filepath.Join(bundleDir, filepath.Base(name))) // #nosec G304
-		if err != nil {
-			return fmt.Errorf("read %s: %w", name, err)
-		}
-		sum := sha256.Sum256(content)
-		if got := hex.EncodeToString(sum[:]); got != want {
-			return fmt.Errorf("checksum mismatch for %s: manifest %s, file %s", name, want, got)
-		}
-	}
-	if man.Signature != "" {
-		pub, err := base64.StdEncoding.DecodeString(man.PublicKey)
-		if err != nil || len(pub) != ed25519.PublicKeySize {
-			return fmt.Errorf("manifest has invalid public key")
-		}
-		sig, err := base64.StdEncoding.DecodeString(man.Signature)
-		if err != nil {
-			return fmt.Errorf("manifest has invalid signature encoding")
-		}
-		signed, err := json.Marshal(man.Files)
-		if err != nil {
-			return fmt.Errorf("encode manifest files: %w", err)
-		}
-		if !ed25519.Verify(ed25519.PublicKey(pub), signed, sig) {
-			return fmt.Errorf("manifest signature verification failed")
-		}
-	}
-	return nil
 }
 
 // renderReport produces the auditor-facing Markdown report: evidence
@@ -233,9 +165,9 @@ func (e *Exporter) renderReport(records []evidence.Record, now time.Time) []byte
 	return []byte(b.String())
 }
 
-func (e *Exporter) lookupControl(id string) (Control, bool) {
+func (e *Exporter) lookupControl(id string) (mapping.Control, bool) {
 	if e.Mapping == nil {
-		return Control{}, false
+		return mapping.Control{}, false
 	}
 	return e.Mapping.Control(id)
 }

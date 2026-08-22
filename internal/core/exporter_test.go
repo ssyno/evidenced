@@ -8,7 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ssyno/evidenced/internal/evidence"
+	"github.com/ssyno/evidenced/bundle"
+	"github.com/ssyno/evidenced/evidence"
 )
 
 func populatedStore(t *testing.T) *FileStore {
@@ -19,7 +20,7 @@ func populatedStore(t *testing.T) *FileStore {
 	}
 	t.Cleanup(func() { store.Close() }) //nolint:errcheck
 
-	m, err := LoadMapping([]byte(testMappingYAML))
+	m, err := loadTestMapping()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -50,7 +51,7 @@ func populatedStore(t *testing.T) *FileStore {
 
 func TestExportAndVerifyBundleSigned(t *testing.T) {
 	store := populatedStore(t)
-	m, err := LoadMapping([]byte(testMappingYAML))
+	m, err := loadTestMapping()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,7 +72,7 @@ func TestExportAndVerifyBundleSigned(t *testing.T) {
 			t.Errorf("bundle missing %s: %v", f, err)
 		}
 	}
-	if err := VerifyBundle(dir); err != nil {
+	if err := bundle.Verify(dir); err != nil {
 		t.Errorf("VerifyBundle = %v, want nil", err)
 	}
 
@@ -106,8 +107,8 @@ func TestVerifyBundleDetectsTampering(t *testing.T) {
 	if err := os.WriteFile(reportPath, append(b, []byte("\nedited after export\n")...), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := VerifyBundle(dir); err == nil {
-		t.Error("VerifyBundle(tampered) = nil error, want checksum failure")
+	if err := bundle.Verify(dir); err == nil {
+		t.Error("bundle.Verify(tampered) = nil error, want checksum failure")
 	}
 }
 

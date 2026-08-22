@@ -12,7 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 
-	"github.com/ssyno/evidenced/internal/evidence"
+	"github.com/ssyno/evidenced/evidence"
 )
 
 func fixtures() []runtime.Object {

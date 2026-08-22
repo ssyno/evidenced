@@ -1,0 +1,108 @@
+# DORA (Regulation (EU) 2022/2554) ICT risk-management mapping.
+# Controls are the articles evidenced can currently produce evidence for;
+# rules connect collector output (by collector id and target type) to them.
+framework: DORA
+controls:
+  - id: dora-6.1
+    article: "Article 6(1)"
+    title: ICT risk management framework
+    summary: >-
+      Entities maintain a sound, comprehensive and well-documented ICT risk
+      management framework enabling them to address ICT risk quickly and
+      effectively. Continuous, scheduled evidence collection (including the
+      record of any collection gaps) demonstrates the monitoring component
+      of that framework in operation.
+  - id: dora-8.1
+    article: "Article 8(1)"
+    title: Identification of ICT assets
+    summary: >-
+      Entities identify, classify and adequately document all ICT supported
+      business functions, information assets and ICT assets. Inventories of
+      workload images, service accounts and certificates provide recurring,
+      timestamped identification evidence.
+  - id: dora-9.2
+    article: "Article 9(2)"
+    title: Security of networks and data in transit
+    summary: >-
+      Entities design, procure and implement ICT security policies that
+      ensure the security of the means of transfer of data. Observed TLS
+      endpoint posture (protocol versions, certificate validity) evidences
+      protection of data in transit.
+  - id: dora-9.3
+    article: "Article 9(3)"
+    title: Policies limiting access and preventing unauthorised software
+    summary: >-
+      Entities implement policies and protocols that prevent the execution
+      of unauthorised software and limit physical or logical access. Image
+      provenance and admission policy posture evidence controls over what
+      software is admitted to run.
+  - id: dora-9.4c
+    article: "Article 9(4)(c)"
+    title: Cryptographic key and certificate management
+    summary: >-
+      Entities implement policies and protocols for strong authentication
+      mechanisms and protection measures of cryptographic keys. Certificate
+      lifecycle evidence (expiry, rotation history, issuer configuration,
+      key parameters) demonstrates managed cryptographic material.
+  - id: dora-9.4d
+    article: "Article 9(4)(d)"
+    title: ICT access management
+    summary: >-
+      Entities implement policies limiting access rights to ICT assets to
+      what is required for legitimate functions, with accountability.
+      RBAC posture evidence (permission scope, privilege drift, service
+      account sprawl) demonstrates ongoing access-rights management.
+  - id: dora-10.1
+    article: "Article 10(1)"
+    title: Detection of anomalous activities
+    summary: >-
+      Entities have mechanisms to promptly detect anomalous activities and
+      monitoring gaps. Records of failed collection attempts document that
+      monitoring interruptions are themselves detected and retained.
+
+rules:
+  # TLS endpoint scanner
+  - collector: tlsscan
+    targetType: tls/endpoint
+    controls: [dora-9.2]
+
+  # Certificate lifecycle (cert-manager)
+  - collector: certlifecycle
+    targetType: cert-manager/certificate
+    controls: [dora-9.4c, dora-8.1]
+  - collector: certlifecycle
+    targetType: cert-manager/issuer
+    controls: [dora-9.4c]
+
+  # RBAC posture
+  - collector: rbacposture
+    targetType: rbac/cluster-role
+    controls: [dora-9.4d]
+  - collector: rbacposture
+    targetType: rbac/binding
+    controls: [dora-9.4d]
+  - collector: rbacposture
+    targetType: rbac/service-account
+    controls: [dora-9.4d, dora-8.1]
+
+  # Deployment provenance
+  - collector: provenance
+    targetType: workload/image
+    controls: [dora-9.3, dora-8.1]
+  - collector: provenance
+    targetType: admission/policy
+    controls: [dora-9.3]
+
+  # Collection failures are evidence of monitoring gaps, whoever fails.
+  - collector: tlsscan
+    targetType: evidenced/collector-run
+    controls: [dora-10.1, dora-6.1]
+  - collector: certlifecycle
+    targetType: evidenced/collector-run
+    controls: [dora-10.1, dora-6.1]
+  - collector: rbacposture
+    targetType: evidenced/collector-run
+    controls: [dora-10.1, dora-6.1]
+  - collector: provenance
+    targetType: evidenced/collector-run
+    controls: [dora-10.1, dora-6.1]

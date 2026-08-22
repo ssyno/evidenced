@@ -9,7 +9,7 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/ssyno/evidenced/internal/evidence"
+	"github.com/ssyno/evidenced/evidence"
 )
 
 // AccessRequirement declares, in the collector's own vocabulary, what
