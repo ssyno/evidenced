@@ -44,6 +44,24 @@ spec:
                   type: string
                 signingKeyPath:
                   type: string
+                push:
+                  type: object
+                  required: [url]
+                  description: >-
+                    Opt-in upload of exported bundles to an evidenced portal.
+                    The token is read from an env var or mounted file, never
+                    from this resource.
+                  properties:
+                    url:
+                      type: string
+                    tokenEnv:
+                      type: string
+                    tokenFile:
+                      type: string
+                    agent:
+                      type: string
+                    caFile:
+                      type: string
                 collectors:
                   type: array
                   items:

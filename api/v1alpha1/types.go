@@ -35,6 +35,24 @@ type EvidencePolicySpec struct {
 	// on first use. Empty disables signing.
 	// +optional
 	SigningKeyPath string `json:"signingKeyPath,omitempty"`
+	// Push uploads each exported bundle to an evidenced portal.
+	// Strictly opt-in: absent, the agent makes no outbound connection.
+	// +optional
+	Push *PushSpec `json:"push,omitempty"`
+}
+
+// PushSpec mirrors the plain-YAML push block. The token is never
+// stored in the CR: it is read from an env var or mounted file.
+type PushSpec struct {
+	URL string `json:"url"`
+	// +optional
+	TokenEnv string `json:"tokenEnv,omitempty"`
+	// +optional
+	TokenFile string `json:"tokenFile,omitempty"`
+	// +optional
+	Agent string `json:"agent,omitempty"`
+	// +optional
+	CAFile string `json:"caFile,omitempty"`
 }
 
 type EvidencePolicyStatus struct {

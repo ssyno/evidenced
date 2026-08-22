@@ -25,6 +25,10 @@ func (in *EvidencePolicySpec) DeepCopyInto(out *EvidencePolicySpec) {
 			in.Collectors[i].DeepCopyInto(&out.Collectors[i])
 		}
 	}
+	if in.Push != nil {
+		p := *in.Push
+		out.Push = &p
+	}
 }
 
 func (in *EvidencePolicyStatus) DeepCopyInto(out *EvidencePolicyStatus) {

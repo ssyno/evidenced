@@ -9,6 +9,14 @@ spec:
   {{- if .Values.policy.signing.enabled }}
   signingKeyPath: /var/lib/evidenced/signing.pem
   {{- end }}
+  {{- if .Values.policy.push.enabled }}
+  push:
+    url: {{ required "policy.push.url is required when push is enabled" .Values.policy.push.url }}
+    tokenEnv: EVIDENCED_PUSH_TOKEN
+    {{- with .Values.policy.push.agent }}
+    agent: {{ . }}
+    {{- end }}
+  {{- end }}
   collectors:
     {{- if .Values.policy.collectors.certlifecycle.enabled }}
     - name: certlifecycle

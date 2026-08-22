@@ -10,6 +10,7 @@ import (
 
 	"github.com/ssyno/evidenced/bundle"
 	"github.com/ssyno/evidenced/internal/core"
+	"github.com/ssyno/evidenced/internal/push"
 	"github.com/ssyno/evidenced/internal/shells/wiring"
 )
 
@@ -46,12 +47,52 @@ func Collect(ctx context.Context, args []string, opts Options) error {
 	_, _ = fmt.Fprintf(opts.Stdout, "collected: %d records in store %s\n", engine.Store.Count(), cfg.StorePath)
 
 	if *report {
-		dir, err := engine.Exporter.Export(cfg.Export.Dir)
+		dir, err := engine.ExportAndPush(ctx)
 		if err != nil {
-			return err
+			if dir == "" {
+				return err
+			}
+			_, _ = fmt.Fprintf(opts.Stdout, "bundle: %s\n", dir)
+			return err // exported but not uploaded: nonzero exit for CI
 		}
 		_, _ = fmt.Fprintf(opts.Stdout, "bundle: %s\n", dir)
+		if engine.Pusher != nil {
+			_, _ = fmt.Fprintf(opts.Stdout, "pushed to portal as agent %q\n", engine.Pusher.Agent())
+		}
 	}
+	return nil
+}
+
+// Push uploads an existing bundle directory using the config's push
+// block — the supported replacement for hand-rolled tar|curl.
+func Push(ctx context.Context, args []string, opts Options) error {
+	fs := flag.NewFlagSet("push", flag.ContinueOnError)
+	configPath := fs.String("config", "evidenced.yaml", "path to config file")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if fs.NArg() != 1 {
+		return fmt.Errorf("usage: evidenced push [--config file] <bundle-dir>")
+	}
+	cfg, err := core.LoadConfig(*configPath)
+	if err != nil {
+		return err
+	}
+	if !cfg.Push.Enabled() {
+		return fmt.Errorf("no push block configured in %s", *configPath)
+	}
+	pusher, err := push.New(cfg.Push)
+	if err != nil {
+		return err
+	}
+	dir := fs.Arg(0)
+	if err := bundle.Verify(dir); err != nil {
+		return fmt.Errorf("refusing to push: %w", err)
+	}
+	if err := pusher.Push(ctx, dir); err != nil {
+		return err
+	}
+	_, _ = fmt.Fprintf(opts.Stdout, "pushed %s as agent %q\n", dir, pusher.Agent())
 	return nil
 }
 

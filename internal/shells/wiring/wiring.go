@@ -6,6 +6,7 @@
 package wiring
 
 import (
+	"context"
 	"crypto/ed25519"
 	"errors"
 	"fmt"
@@ -15,6 +16,7 @@ import (
 	"github.com/ssyno/evidenced/evidence"
 	"github.com/ssyno/evidenced/internal/collectors/tlsscan"
 	"github.com/ssyno/evidenced/internal/core"
+	"github.com/ssyno/evidenced/internal/push"
 	"github.com/ssyno/evidenced/mapping"
 	"github.com/ssyno/evidenced/mapping/dora"
 )
@@ -44,6 +46,26 @@ type Engine struct {
 	Mapping   *mapping.Mapping
 	Scheduler *core.Scheduler
 	Exporter  *core.Exporter
+	// Pusher is nil unless the config opts into portal upload.
+	Pusher *push.Pusher
+}
+
+// ExportAndPush exports a bundle and, when push is configured, uploads
+// it. A failed upload is returned alongside the bundle path so callers
+// can log it without discarding the export — collection and export
+// never depend on portal availability.
+func (e *Engine) ExportAndPush(ctx context.Context) (string, error) {
+	dir, err := e.Exporter.Export(e.Config.Export.Dir)
+	if err != nil {
+		return "", err
+	}
+	if e.Pusher == nil {
+		return dir, nil
+	}
+	if err := e.Pusher.Push(ctx, dir); err != nil {
+		return dir, fmt.Errorf("bundle exported to %s but upload failed: %w", dir, err)
+	}
+	return dir, nil
 }
 
 // Build assembles an Engine. extra provides shell-specific collector
@@ -86,7 +108,16 @@ func Build(cfg *core.Config, extra map[string]Factory) (*Engine, error) {
 		return nil, err
 	}
 
+	var pusher *push.Pusher
+	if cfg.Push.Enabled() {
+		if pusher, err = push.New(cfg.Push); err != nil {
+			_ = store.Close()
+			return nil, err
+		}
+	}
+
 	return &Engine{
+		Pusher: pusher,
 		Config:   cfg,
 		Registry: reg,
 		Store:    store,

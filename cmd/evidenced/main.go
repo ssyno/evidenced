@@ -49,6 +49,8 @@ func run() error {
 		return cli.Verify(args, cliOpts)
 	case "verify-bundle":
 		return cli.VerifyBundle(args, cliOpts)
+	case "push":
+		return cli.Push(ctx, args, cliOpts)
 	case "daemon":
 		log := slog.New(slog.NewJSONHandler(os.Stderr, nil))
 		return daemon.Run(ctx, args, daemon.Options{Log: log, Factories: kubeFactories})
@@ -73,6 +75,7 @@ Commands:
   export         export an evidence bundle from the existing store
   verify         verify the evidence store's hash chain
   verify-bundle  verify an exported bundle's checksums and signature
+  push           upload an existing bundle to the configured portal
   daemon         long-running collection on a VM (YAML config)
   operator       Kubernetes operator (CRD-driven config)
   version        print version

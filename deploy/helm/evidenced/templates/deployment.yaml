@@ -47,6 +47,14 @@ spec:
             {{- if .Values.leaderElection.enabled }}
             - --leader-elect
             {{- end }}
+          {{- if .Values.policy.push.enabled }}
+          env:
+            - name: EVIDENCED_PUSH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "policy.push.existingSecret is required when push is enabled" .Values.policy.push.existingSecret }}
+                  key: token
+          {{- end }}
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
