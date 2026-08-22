@@ -10,6 +10,7 @@ import (
 
 	"github.com/ssyno/evidenced/internal/shells/cli"
 	"github.com/ssyno/evidenced/internal/shells/daemon"
+	"github.com/ssyno/evidenced/internal/shells/wiring"
 )
 
 // version is set at build time via -ldflags.
@@ -29,7 +30,14 @@ func run() error {
 	}
 	ctx := context.Background()
 	args := os.Args[2:]
-	cliOpts := cli.Options{Stdout: os.Stdout}
+
+	// Kubernetes collectors are available in every shell when a cluster
+	// is reachable; without one, only their factories are absent.
+	kubeFactories, err := wiring.ResolveKubeFactories()
+	if err != nil {
+		return err
+	}
+	cliOpts := cli.Options{Stdout: os.Stdout, Factories: kubeFactories}
 
 	switch os.Args[1] {
 	case "collect":
@@ -42,7 +50,7 @@ func run() error {
 		return cli.VerifyBundle(args, cliOpts)
 	case "daemon":
 		log := slog.New(slog.NewJSONHandler(os.Stderr, nil))
-		return daemon.Run(ctx, args, daemon.Options{Log: log})
+		return daemon.Run(ctx, args, daemon.Options{Log: log, Factories: kubeFactories})
 	case "operator":
 		return fmt.Errorf("operator shell is not implemented yet")
 	case "version":
