@@ -10,6 +10,7 @@ import (
 
 	"github.com/ssyno/evidenced/internal/shells/cli"
 	"github.com/ssyno/evidenced/internal/shells/daemon"
+	"github.com/ssyno/evidenced/internal/shells/operator"
 	"github.com/ssyno/evidenced/internal/shells/wiring"
 )
 
@@ -52,7 +53,7 @@ func run() error {
 		log := slog.New(slog.NewJSONHandler(os.Stderr, nil))
 		return daemon.Run(ctx, args, daemon.Options{Log: log, Factories: kubeFactories})
 	case "operator":
-		return fmt.Errorf("operator shell is not implemented yet")
+		return operator.Run(ctx, args)
 	case "version":
 		fmt.Println(version)
 		return nil
