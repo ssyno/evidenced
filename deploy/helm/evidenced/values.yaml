@@ -32,6 +32,8 @@ policy:
     url: ""                # e.g. https://portal.example.com
     agent: ""              # defaults to the pod hostname
     existingSecret: ""     # Secret with key "token" holding the API token
+    # Secret with key "ca.crt" to trust a private CA for the portal TLS.
+    caSecret: ""
   collectors:
     certlifecycle:
       enabled: true
