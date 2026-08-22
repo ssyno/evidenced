@@ -76,8 +76,18 @@ spec:
           volumeMounts:
             - name: store
               mountPath: /var/lib/evidenced
+            {{- if .Values.policy.push.caSecret }}
+            - name: portal-ca
+              mountPath: /etc/evidenced/portal-ca
+              readOnly: true
+            {{- end }}
           resources: {{- toYaml .Values.resources | nindent 12 }}
       volumes:
         - name: store
           persistentVolumeClaim:
             claimName: {{ include "evidenced.fullname" . }}-store
+        {{- if .Values.policy.push.caSecret }}
+        - name: portal-ca
+          secret:
+            secretName: {{ .Values.policy.push.caSecret }}
+        {{- end }}

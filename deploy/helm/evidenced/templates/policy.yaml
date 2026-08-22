@@ -16,6 +16,9 @@ spec:
     {{- with .Values.policy.push.agent }}
     agent: {{ . }}
     {{- end }}
+    {{- if .Values.policy.push.caSecret }}
+    caFile: /etc/evidenced/portal-ca/ca.crt
+    {{- end }}
   {{- end }}
   collectors:
     {{- if .Values.policy.collectors.certlifecycle.enabled }}
