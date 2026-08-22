@@ -13,7 +13,9 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -194,7 +196,10 @@ func (r *EvidencePolicyReconciler) dropEngine(name string) {
 
 func (r *EvidencePolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1alpha1.EvidencePolicy{}).
+		// Reconciles are the collection schedule (RequeueAfter). Without
+		// filtering, our own status patches would retrigger immediately
+		// and turn the interval into a hot loop.
+		For(&v1alpha1.EvidencePolicy{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Named("evidencepolicy").
 		Complete(r)
 }
