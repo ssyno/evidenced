@@ -1,0 +1,82 @@
+# The ClusterRole is deliberately read-only and minimal: list/watch/get
+# on exactly what collectors declare, plus evidenced's own CRDs. Any
+# widening must be justified in the PR description.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "evidenced.fullname" . }}
+  labels: {{- include "evidenced.labels" . | nindent 4 }}
+rules:
+  # Own CRDs
+  - apiGroups: [evidenced.io]
+    resources: [evidencepolicies]
+    verbs: [get, list, watch]
+  - apiGroups: [evidenced.io]
+    resources: [evidencepolicies/status]
+    verbs: [get, patch, update]
+  - apiGroups: [evidenced.io]
+    resources: [evidencereports]
+    verbs: [get, list, watch, create]
+  # certlifecycle collector
+  - apiGroups: [cert-manager.io]
+    resources: [certificates, issuers, clusterissuers]
+    verbs: [get, list, watch]
+  # rbacposture collector
+  - apiGroups: [rbac.authorization.k8s.io]
+    resources: [clusterroles, clusterrolebindings]
+    verbs: [get, list, watch]
+  - apiGroups: [""]
+    resources: [serviceaccounts]
+    verbs: [get, list, watch]
+  # provenance collector
+  - apiGroups: [apps]
+    resources: [deployments, statefulsets, daemonsets]
+    verbs: [get, list, watch]
+  - apiGroups: [admissionregistration.k8s.io]
+    resources: [validatingwebhookconfigurations]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "evidenced.fullname" . }}
+  labels: {{- include "evidenced.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "evidenced.fullname" . }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "evidenced.fullname" . }}
+    namespace: {{ .Release.Namespace }}
+{{- if .Values.leaderElection.enabled }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "evidenced.fullname" . }}-leader-election
+  namespace: {{ .Release.Namespace }}
+  labels: {{- include "evidenced.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [coordination.k8s.io]
+    resources: [leases]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [""]
+    resources: [events]
+    verbs: [create, patch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "evidenced.fullname" . }}-leader-election
+  namespace: {{ .Release.Namespace }}
+  labels: {{- include "evidenced.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "evidenced.fullname" . }}-leader-election
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "evidenced.fullname" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}

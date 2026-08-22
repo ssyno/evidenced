@@ -1,0 +1,28 @@
+[Unit]
+Description=evidenced - continuous compliance evidence collection
+Documentation=https://github.com/ssyno/evidenced
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/evidenced daemon --config /etc/evidenced/config.yaml
+Restart=on-failure
+RestartSec=10
+
+# evidenced is read-only toward the system; it only writes its own state.
+StateDirectory=evidenced
+User=evidenced
+Group=evidenced
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/evidenced
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,26 @@
+# evidenced daemon configuration — the same schema the CLI uses and the
+# operator's EvidencePolicy CRD translates into.
+storePath: /var/lib/evidenced/evidence.jsonl
+interval: 1h
+export:
+  dir: /var/lib/evidenced/reports
+signing:
+  keyPath: /var/lib/evidenced/signing.pem   # generated on first run
+
+collectors:
+  # Zero-access external TLS posture scan.
+  tlsscan:
+    enabled: true
+    settings:
+      endpoints:
+        - example.com:443
+      timeout: 10s
+
+  # Kubernetes collectors work from a VM too when a kubeconfig is
+  # available to the evidenced user (KUBECONFIG or ~/.kube/config).
+  certlifecycle:
+    enabled: false
+  rbacposture:
+    enabled: false
+  provenance:
+    enabled: false
