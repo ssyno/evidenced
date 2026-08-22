@@ -1,0 +1,27 @@
+{{- if .Values.policy.create }}
+apiVersion: evidenced.io/v1alpha1
+kind: EvidencePolicy
+metadata:
+  name: {{ .Values.policy.name }}
+  labels: {{- include "evidenced.labels" . | nindent 4 }}
+spec:
+  interval: {{ .Values.policy.interval }}
+  {{- if .Values.policy.signing.enabled }}
+  signingKeyPath: /var/lib/evidenced/signing.pem
+  {{- end }}
+  collectors:
+    {{- if .Values.policy.collectors.certlifecycle.enabled }}
+    - name: certlifecycle
+    {{- end }}
+    {{- if .Values.policy.collectors.rbacposture.enabled }}
+    - name: rbacposture
+    {{- end }}
+    {{- if .Values.policy.collectors.provenance.enabled }}
+    - name: provenance
+    {{- end }}
+    {{- if .Values.policy.collectors.tlsscan.enabled }}
+    - name: tlsscan
+      settings:
+        endpoints: {{- toYaml .Values.policy.collectors.tlsscan.endpoints | nindent 10 }}
+    {{- end }}
+{{- end }}
