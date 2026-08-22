@@ -105,6 +105,12 @@ func (s *FileStore) Close() error {
 	return s.f.Close()
 }
 
+// ReadStoreRecords reads a store file without opening it for writing —
+// for read-only inspection alongside a running writer.
+func ReadStoreRecords(path string) ([]evidence.Record, error) {
+	return readRecords(path)
+}
+
 func readRecords(path string) ([]evidence.Record, error) {
 	f, err := os.Open(path) // #nosec G304 -- path comes from operator-supplied config
 	if err != nil {
