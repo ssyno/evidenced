@@ -55,11 +55,17 @@ func Run(ctx context.Context, args []string, opts Options) error {
 		if err := engine.Scheduler.RunOnce(ctx); err != nil {
 			return err
 		}
-		dir, err := engine.Exporter.Export(cfg.Export.Dir)
+		dir, err := engine.ExportAndPush(ctx)
 		if err != nil {
-			return err
+			if dir == "" {
+				return err // export itself failed
+			}
+			// The bundle is safely on disk; a failed upload is logged
+			// and retried implicitly next cycle.
+			log.Warn("bundle upload failed", "bundle", dir, "error", err)
 		}
-		log.Info("cycle complete", "records", engine.Store.Count(), "bundle", dir)
+		log.Info("cycle complete", "records", engine.Store.Count(), "bundle", dir,
+			"pushed", engine.Pusher != nil && err == nil)
 		return nil
 	}
 

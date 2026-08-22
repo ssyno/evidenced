@@ -66,6 +66,38 @@ evidenced verify-bundle reports/evidence-20260822-110000Z
 auditor together with the bundle and they can check checksums and the
 ed25519 signature independently.
 
+## Connecting to a portal (opt-in push)
+
+By default the agent makes **no outbound connections** — evidence stays
+where it was collected. To upload each exported bundle to an evidenced
+portal, add a push block; the API token is read from an environment
+variable or a mounted file, never from the config itself:
+
+```yaml
+push:
+  url: https://portal.example.com
+  tokenEnv: EVIDENCED_PUSH_TOKEN   # or tokenFile: /var/run/secrets/evidenced/token
+  agent: prod-cluster              # defaults to hostname
+  # caFile: /etc/evidenced/portal-ca.pem   # private CA, if needed
+```
+
+All shells honor it: the daemon and operator upload after every cycle,
+`collect --report` uploads in CI, and `evidenced push <bundle-dir>`
+re-uploads an existing bundle. HTTPS is required (plain HTTP is allowed
+only toward loopback for development). A failed upload never interrupts
+collection: the bundle stays on disk and the failure is logged (and
+surfaced in the EvidencePolicy status in the operator).
+
+In the helm chart:
+
+```yaml
+policy:
+  push:
+    enabled: true
+    url: https://portal.example.com
+    existingSecret: evidenced-portal-token   # key "token"
+```
+
 ## The evidence store
 
 - Append-only JSONL, one record per line, SHA-256 hash-chained.

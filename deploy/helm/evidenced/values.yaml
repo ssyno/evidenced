@@ -25,6 +25,13 @@ policy:
   interval: 1h
   signing:
     enabled: true
+  # Opt-in upload of each bundle to an evidenced portal. The token is
+  # read from a Secret; it never appears in the CR.
+  push:
+    enabled: false
+    url: ""                # e.g. https://portal.example.com
+    agent: ""              # defaults to the pod hostname
+    existingSecret: ""     # Secret with key "token" holding the API token
   collectors:
     certlifecycle:
       enabled: true

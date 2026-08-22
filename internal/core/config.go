@@ -17,8 +17,26 @@ type Config struct {
 	Interval   time.Duration              `yaml:"interval"`
 	Export     ExportConfig               `yaml:"export"`
 	Signing    SigningConfig              `yaml:"signing"`
+	Push       PushConfig                 `yaml:"push"`
 	Collectors map[string]CollectorConfig `yaml:"collectors"`
 }
+
+// PushConfig enables uploading exported bundles to an evidenced portal.
+// Absent (empty URL), the agent makes no outbound connection: push is
+// strictly opt-in. The token is never placed in this file — it is read
+// from an environment variable or a mounted file.
+type PushConfig struct {
+	URL       string `yaml:"url"`
+	TokenEnv  string `yaml:"tokenEnv,omitempty"`
+	TokenFile string `yaml:"tokenFile,omitempty"`
+	// Agent names the deployment on the portal; defaults to hostname.
+	Agent string `yaml:"agent,omitempty"`
+	// CAFile trusts a private CA for the portal's TLS certificate.
+	CAFile string `yaml:"caFile,omitempty"`
+}
+
+// Enabled reports whether push is configured at all.
+func (p PushConfig) Enabled() bool { return p.URL != "" }
 
 type ExportConfig struct {
 	Dir string `yaml:"dir"`

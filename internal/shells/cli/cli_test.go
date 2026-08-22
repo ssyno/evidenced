@@ -104,6 +104,75 @@ collectors:
 	}
 }
 
+// Collect --report with a push block uploads the fresh bundle; the
+// explicit push command re-uploads an existing one.
+func TestCollectPushesToPortal(t *testing.T) {
+	tlsSrv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	defer tlsSrv.Close()
+
+	uploads := 0
+	portal := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/v1/bundles" && r.Header.Get("Authorization") == "Bearer evd_ci" &&
+			r.Header.Get("X-Evidenced-Agent") == "ci-runner" {
+			uploads++
+			w.WriteHeader(http.StatusCreated)
+			_, _ = w.Write([]byte(`{"id":"x"}`))
+			return
+		}
+		w.WriteHeader(http.StatusUnauthorized)
+	}))
+	defer portal.Close()
+	t.Setenv("EVD_CI_TOKEN", "evd_ci")
+
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "evidenced.yaml")
+	config := fmt.Sprintf(`
+storePath: %s/evidence.jsonl
+export:
+  dir: %s/reports
+push:
+  url: %s
+  tokenEnv: EVD_CI_TOKEN
+  agent: ci-runner
+collectors:
+  tlsscan:
+    enabled: true
+    settings:
+      endpoints: ["%s"]
+`, dir, dir, portal.URL, tlsSrv.Listener.Addr().String())
+	if err := os.WriteFile(configPath, []byte(config), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	var out bytes.Buffer
+	opts := Options{Stdout: &out}
+	if err := Collect(context.Background(), []string{"-config", configPath, "-report"}, opts); err != nil {
+		t.Fatalf("collect with push: %v\n%s", err, out.String())
+	}
+	if uploads != 1 {
+		t.Fatalf("portal received %d uploads, want 1", uploads)
+	}
+	if !strings.Contains(out.String(), `pushed to portal as agent "ci-runner"`) {
+		t.Errorf("output = %q", out.String())
+	}
+
+	// Explicit re-push of the exported bundle.
+	lines := strings.Split(strings.TrimSpace(out.String()), "\n")
+	var bundleDir string
+	for _, l := range lines {
+		if strings.HasPrefix(l, "bundle: ") {
+			bundleDir = strings.TrimPrefix(l, "bundle: ")
+		}
+	}
+	out.Reset()
+	if err := Push(context.Background(), []string{"-config", configPath, bundleDir}, opts); err != nil {
+		t.Fatalf("push command: %v", err)
+	}
+	if uploads != 2 {
+		t.Errorf("portal received %d uploads after explicit push, want 2", uploads)
+	}
+}
+
 func TestCollectRejectsUnknownCollector(t *testing.T) {
 	dir := t.TempDir()
 	configPath := filepath.Join(dir, "evidenced.yaml")

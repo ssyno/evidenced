@@ -82,11 +82,11 @@ Rules for THIS repo stay unchanged, with one addition:
 - The portal consumes ONLY the public packages `evidence/`, `mapping/`,
   and `bundle/` — that is the stable API surface; breaking it requires
   updating the portal in the same change.
-- The agent binary still never phones home. Evidence reaches the portal
-  only when the customer explicitly configures/performs an upload
-  (API token + `curl`, web upload). An opt-in `evidenced push` command
-  is a possible future addition, to be scoped deliberately, not drifted
-  into.
+- The agent binary still never phones home BY DEFAULT. Outbound upload
+  exists only via the opt-in `push:` config block (scoped 2026-08-22):
+  token from env/file only (never inline), HTTPS enforced except
+  loopback, upload failures logged but never fatal to collection, and
+  with no push block configured there is zero network egress.
 
 ## Go conventions
 

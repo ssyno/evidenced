@@ -93,13 +93,17 @@ func (r *EvidencePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{RequeueAfter: time.Minute}, nil
 	}
 
-	bundle, err := engine.Exporter.Export(engine.Config.Export.Dir)
-	if err != nil {
+	bundle, err := engine.ExportAndPush(ctx)
+	if err != nil && bundle == "" {
 		r.patchStatus(ctx, &policy, func(s *v1alpha1.EvidencePolicyStatus) {
 			s.LastError = err.Error()
 			s.ObservedGeneration = policy.Generation
 		})
 		return ctrl.Result{RequeueAfter: time.Minute}, nil
+	}
+	pushErr := err // export succeeded; a push failure is surfaced, not fatal
+	if pushErr != nil {
+		logger.Error(pushErr, "bundle upload failed")
 	}
 
 	now := r.now()
@@ -109,6 +113,9 @@ func (r *EvidencePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	r.patchStatus(ctx, &policy, func(s *v1alpha1.EvidencePolicyStatus) {
 		s.LastError = ""
+		if pushErr != nil {
+			s.LastError = pushErr.Error()
+		}
 		s.ObservedGeneration = policy.Generation
 		s.LastRunTime = &metav1.Time{Time: now}
 		s.Records = int64(engine.Store.Count())
@@ -219,6 +226,12 @@ func Translate(spec *v1alpha1.EvidencePolicySpec) (*core.Config, error) {
 		Export:     core.ExportConfig{Dir: spec.ExportDir},
 		Signing:    core.SigningConfig{KeyPath: spec.SigningKeyPath},
 		Collectors: raw,
+	}
+	if spec.Push != nil {
+		cfg.Push = core.PushConfig{
+			URL: spec.Push.URL, TokenEnv: spec.Push.TokenEnv, TokenFile: spec.Push.TokenFile,
+			Agent: spec.Push.Agent, CAFile: spec.Push.CAFile,
+		}
 	}
 	if spec.Interval != nil {
 		cfg.Interval = spec.Interval.Duration
