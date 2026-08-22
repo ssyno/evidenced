@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ssyno/evidenced/internal/evidence"
+	"github.com/ssyno/evidenced/evidence"
 )
 
 func testServer(t *testing.T) (*httptest.Server, string) {

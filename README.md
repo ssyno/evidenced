@@ -23,8 +23,9 @@ bundle any auditor can verify independently.
   enforced by tests.
 - **Runs where you run.** Kubernetes operator, systemd daemon on a VM,
   or one-shot CLI in CI — same engine, same YAML schema, same output.
-- **No phone-home.** Evidence never leaves your environment unless you
-  export it.
+- **No phone-home.** The agent never sends data anywhere on its own.
+  Evidence reaches the evidenced portal (or any other destination) only
+  when you explicitly export or upload it.
 
 ## Collectors (MVP)
 
@@ -68,5 +69,5 @@ static binaries for linux/amd64 and linux/arm64.
 
 Layout: `internal/core` (engine, zero platform assumptions),
 `internal/collectors/*` (pluggable observers), `internal/shells/*`
-(operator / daemon / cli frontends), `internal/mapping/dora` (control
+(operator / daemon / cli frontends), ``mapping/dora` (control
 catalog as data).

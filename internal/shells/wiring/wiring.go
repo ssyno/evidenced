@@ -12,10 +12,11 @@ import (
 	"maps"
 	"os"
 
+	"github.com/ssyno/evidenced/evidence"
 	"github.com/ssyno/evidenced/internal/collectors/tlsscan"
 	"github.com/ssyno/evidenced/internal/core"
-	"github.com/ssyno/evidenced/internal/evidence"
-	"github.com/ssyno/evidenced/internal/mapping/dora"
+	"github.com/ssyno/evidenced/mapping"
+	"github.com/ssyno/evidenced/mapping/dora"
 )
 
 // Factory builds a collector from its settings block in the config.
@@ -40,7 +41,7 @@ type Engine struct {
 	Config    *core.Config
 	Registry  *core.Registry
 	Store     *core.FileStore
-	Mapping   *core.Mapping
+	Mapping   *mapping.Mapping
 	Scheduler *core.Scheduler
 	Exporter  *core.Exporter
 }

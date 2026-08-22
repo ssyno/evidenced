@@ -16,7 +16,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/ssyno/evidenced/internal/core"
-	"github.com/ssyno/evidenced/internal/evidence"
+	"github.com/ssyno/evidenced/evidence"
 )
 
 const (

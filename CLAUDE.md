@@ -66,11 +66,27 @@ IN scope:
 OUT of scope (stub interfaces only, do not implement, do not "just add"):
 - NIS2 / AI Act / PCI-DSS mappings
 - Host posture and cloud API collectors (interface + stub only)
-- Any UI beyond the report export
-- Multi-cluster, SaaS control plane, agent identity module, enforcement of
-  any kind
+- Any UI in THIS repo beyond the report export (customer-facing web UI
+  lives in the separate evidenced-portal repo)
+- Multi-cluster, agent identity module, enforcement of any kind
 
 If a task drifts toward OUT items, stop and flag it instead of building it.
+
+## The portal (separate repo: evidenced-portal)
+
+Scope decision 2026-08-22: a hosted customer portal exists as its own
+product in `../evidenced-portal` (accounts, gated binary/deployment
+downloads, agents connected to accounts, uploaded-bundle results).
+Rules for THIS repo stay unchanged, with one addition:
+
+- The portal consumes ONLY the public packages `evidence/`, `mapping/`,
+  and `bundle/` — that is the stable API surface; breaking it requires
+  updating the portal in the same change.
+- The agent binary still never phones home. Evidence reaches the portal
+  only when the customer explicitly configures/performs an upload
+  (API token + `curl`, web upload). An opt-in `evidenced push` command
+  is a possible future addition, to be scoped deliberately, not drifted
+  into.
 
 ## Go conventions
 
@@ -106,8 +122,10 @@ If a task drifts toward OUT items, stop and flag it instead of building it.
 
 ```
 cmd/evidenced/            # main; subcommands select shell
-internal/core/            # scheduler, store, mapping engine, exporter
-internal/evidence/        # record types, hash chain, signing
+evidence/                 # PUBLIC: record types, hash chain, signing
+mapping/                  # PUBLIC: mapping engine; mapping/dora/ catalog data
+bundle/                   # PUBLIC: bundle format, manifest, verification
+internal/core/            # scheduler, store, exporter
 internal/collectors/
   certlifecycle/
   rbacposture/
@@ -119,7 +137,6 @@ internal/shells/
   operator/               # controller-runtime lives here and only here
   daemon/
   cli/
-internal/mapping/dora/    # control catalog + mapping data (YAML) + engine glue
 api/v1alpha1/             # CRD types (operator shell frontend)
 deploy/helm/evidenced/
 deploy/systemd/
@@ -131,7 +148,7 @@ Makefile
 
 1. Compiles for both targets, `make lint test` clean.
 2. Collector output maps to at least one DORA control id, with the mapping
-   data in `internal/mapping/dora/`, not hardcoded in Go.
+   data in `mapping/dora/`, not hardcoded in Go.
 3. Works in at least the operator shell AND one non-k8s shell (cli counts)
    if the feature is core-level; k8s-only collectors need operator shell +
    unit tests only.

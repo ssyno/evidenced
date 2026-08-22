@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ssyno/evidenced/internal/evidence"
+	"github.com/ssyno/evidenced/evidence"
 )
 
 func newRecord(name string) evidence.Record {

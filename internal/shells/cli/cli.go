@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/ssyno/evidenced/bundle"
 	"github.com/ssyno/evidenced/internal/core"
 	"github.com/ssyno/evidenced/internal/shells/wiring"
 )
@@ -109,7 +110,7 @@ func VerifyBundle(args []string, opts Options) error {
 		return fmt.Errorf("usage: evidenced verify-bundle <bundle-dir>")
 	}
 	dir := fs.Arg(0)
-	if err := core.VerifyBundle(dir); err != nil {
+	if err := bundle.Verify(dir); err != nil {
 		return err
 	}
 	_, _ = fmt.Fprintf(opts.Stdout, "bundle %s: checksums and signature valid\n", dir)

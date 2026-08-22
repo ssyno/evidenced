@@ -16,7 +16,7 @@ import (
 
 	"github.com/ssyno/evidenced/api/v1alpha1"
 	"github.com/ssyno/evidenced/internal/core"
-	"github.com/ssyno/evidenced/internal/evidence"
+	"github.com/ssyno/evidenced/evidence"
 	"github.com/ssyno/evidenced/internal/shells/wiring"
 )
 

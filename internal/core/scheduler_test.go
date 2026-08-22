@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ssyno/evidenced/internal/evidence"
+	"github.com/ssyno/evidenced/evidence"
 )
 
 type fakeCollector struct {
@@ -46,7 +46,7 @@ func testScheduler(t *testing.T, collectors ...Collector) (*Scheduler, *FileStor
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { store.Close() }) //nolint:errcheck
-	m, err := LoadMapping([]byte(testMappingYAML))
+	m, err := loadTestMapping()
 	if err != nil {
 		t.Fatal(err)
 	}
