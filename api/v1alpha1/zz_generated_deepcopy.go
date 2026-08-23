@@ -19,6 +19,10 @@ func (in *EvidencePolicySpec) DeepCopyInto(out *EvidencePolicySpec) {
 		d := *in.Interval
 		out.Interval = &d
 	}
+	if in.StoreRotateAfter != nil {
+		d := *in.StoreRotateAfter
+		out.StoreRotateAfter = &d
+	}
 	if in.Collectors != nil {
 		out.Collectors = make([]CollectorSpec, len(in.Collectors))
 		for i := range in.Collectors {

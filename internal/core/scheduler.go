@@ -22,6 +22,8 @@ type Scheduler struct {
 	Store    Store
 	Mapping  *mapping.Mapping
 	Interval time.Duration
+	// RotateAfter bounds the chain's age; 0 disables rotation here.
+	RotateAfter time.Duration
 	Clock    func() time.Time // defaults to time.Now
 	Log      *slog.Logger     // defaults to slog.Default
 }
@@ -43,6 +45,17 @@ func (s *Scheduler) log() *slog.Logger {
 // RunOnce executes a single collection cycle. Only store failures return
 // an error; collector failures are converted into evidence records.
 func (s *Scheduler) RunOnce(ctx context.Context) error {
+	if s.RotateAfter > 0 {
+		if fs, ok := s.Store.(*FileStore); ok {
+			archive, err := fs.MaybeRotate(s.RotateAfter, s.now())
+			if err != nil {
+				return fmt.Errorf("rotate store: %w", err)
+			}
+			if archive != "" {
+				s.log().Info("evidence chain rotated", "archive", archive)
+			}
+		}
+	}
 	for _, c := range s.Registry.All() {
 		records, err := c.Collect(ctx)
 		if err != nil {

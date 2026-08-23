@@ -13,12 +13,18 @@ import (
 // daemon and CLI read it from a YAML file; the operator translates its
 // CRDs into it. Shells must not invent their own knobs.
 type Config struct {
-	StorePath  string                     `yaml:"storePath"`
-	Interval   time.Duration              `yaml:"interval"`
-	Export     ExportConfig               `yaml:"export"`
-	Signing    SigningConfig              `yaml:"signing"`
-	Push       PushConfig                 `yaml:"push"`
-	Collectors map[string]CollectorConfig `yaml:"collectors"`
+	StorePath string `yaml:"storePath"`
+	// StoreRotateAfter bounds the chain's age: once the oldest record
+	// exceeds it, the store is archived and a new chain starts with a
+	// rotation record referencing the old chain's head hash. Keeps
+	// bundles bounded on long-running agents. Default 720h (30 days);
+	// set very large to effectively disable.
+	StoreRotateAfter time.Duration              `yaml:"storeRotateAfter"`
+	Interval         time.Duration              `yaml:"interval"`
+	Export           ExportConfig               `yaml:"export"`
+	Signing          SigningConfig              `yaml:"signing"`
+	Push             PushConfig                 `yaml:"push"`
+	Collectors       map[string]CollectorConfig `yaml:"collectors"`
 }
 
 // PushConfig enables uploading exported bundles to an evidenced portal.
@@ -98,6 +104,9 @@ func (c *Config) applyDefaults() {
 	if c.Interval == 0 {
 		c.Interval = time.Hour
 	}
+	if c.StoreRotateAfter == 0 {
+		c.StoreRotateAfter = 720 * time.Hour
+	}
 	if c.Export.Dir == "" {
 		c.Export.Dir = "reports"
 	}
@@ -109,6 +118,9 @@ func (c *Config) applyDefaults() {
 func (c *Config) validate() error {
 	if c.Interval < time.Minute {
 		return fmt.Errorf("interval %s is below the 1m minimum", c.Interval)
+	}
+	if c.StoreRotateAfter < 24*time.Hour {
+		return fmt.Errorf("storeRotateAfter %s is below the 24h minimum", c.StoreRotateAfter)
 	}
 	return nil
 }

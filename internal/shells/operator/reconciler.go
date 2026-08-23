@@ -241,6 +241,12 @@ func Translate(spec *v1alpha1.EvidencePolicySpec) (*core.Config, error) {
 	if spec.Interval != nil {
 		cfg.Interval = spec.Interval.Duration
 	}
+	if spec.StoreRotateAfter != nil {
+		cfg.StoreRotateAfter = spec.StoreRotateAfter.Duration
+	}
+	if cfg.StoreRotateAfter == 0 {
+		cfg.StoreRotateAfter = 720 * time.Hour
+	}
 	if cfg.StorePath == "" {
 		cfg.StorePath = "/var/lib/evidenced/evidence.jsonl"
 	}

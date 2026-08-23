@@ -28,6 +28,10 @@ type EvidencePolicySpec struct {
 	// PVC there for durability). Defaults to /var/lib/evidenced/evidence.jsonl.
 	// +optional
 	StorePath string `json:"storePath,omitempty"`
+	// StoreRotateAfter bounds the chain's age; the store archives and a
+	// new chain starts once exceeded. Defaults to 720h.
+	// +optional
+	StoreRotateAfter *metav1.Duration `json:"storeRotateAfter,omitempty"`
 	// ExportDir is where bundles are written. Defaults to /var/lib/evidenced/reports.
 	// +optional
 	ExportDir string `json:"exportDir,omitempty"`
