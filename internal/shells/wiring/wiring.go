@@ -123,10 +123,11 @@ func Build(cfg *core.Config, extra map[string]Factory) (*Engine, error) {
 		Store:    store,
 		Mapping:  mapping,
 		Scheduler: &core.Scheduler{
-			Registry: reg,
-			Store:    store,
-			Mapping:  mapping,
-			Interval: cfg.Interval,
+			Registry:    reg,
+			Store:       store,
+			Mapping:     mapping,
+			Interval:    cfg.Interval,
+			RotateAfter: cfg.StoreRotateAfter,
 		},
 		Exporter: &core.Exporter{Store: store, Mapping: mapping, Key: key},
 	}, nil

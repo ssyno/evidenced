@@ -31,3 +31,14 @@ independently on an exported bundle.
 Records are immutable once written. evidenced only ever appends new
 records; corrections are expressed as new observations, never as edits to
 history.
+
+## Chain rotation
+
+Long-running agents rotate their store on a configurable age
+(`storeRotateAfter`, default 30 days, minimum 24h). The old segment is
+archived next to the store file, untouched and still verifiable, and
+the new chain's first record is a **rotation record** carrying the
+archived chain's final hash and record count. Anyone holding the
+segments can therefore verify not only each chain but the continuity
+between them. Rotation keeps export bundles bounded: each bundle
+contains at most one rotation period of history.

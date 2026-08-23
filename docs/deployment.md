@@ -102,5 +102,9 @@ policy:
 
 - Append-only JSONL, one record per line, SHA-256 hash-chained.
 - Verified fully on every open; a tampered store refuses to load.
+- Rotates every `storeRotateAfter` (default 720h): the old segment is
+  archived beside the store, and the new chain opens with a rotation
+  record referencing the archived chain's head hash — bundles stay
+  bounded, continuity stays provable.
 - Keep it on durable storage. Losing it does not break future
   collection (a new chain starts), but history is your audit trail.

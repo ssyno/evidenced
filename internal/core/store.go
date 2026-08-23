@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/ssyno/evidenced/evidence"
 )
@@ -23,14 +25,19 @@ type Store interface {
 	Close() error
 }
 
+// TargetTypeChainRotation is the target type of the genesis record a
+// rotated chain starts with, linking it to its archived predecessor.
+const TargetTypeChainRotation = "evidenced/chain-rotation"
+
 // FileStore persists records as one JSON object per line. On open it
 // replays the file to verify the chain and resume it at the last hash.
 type FileStore struct {
-	mu    sync.Mutex
-	path  string
-	f     *os.File
-	chain *evidence.Chain
-	count int
+	mu      sync.Mutex
+	path    string
+	f       *os.File
+	chain   *evidence.Chain
+	count   int
+	firstAt time.Time // CollectedAt of the oldest record, zero when empty
 }
 
 // OpenFileStore opens or creates the store at path. An existing file is
@@ -55,12 +62,20 @@ func OpenFileStore(path string) (*FileStore, error) {
 	if err != nil {
 		return nil, fmt.Errorf("open store %s: %w", path, err)
 	}
-	return &FileStore{path: path, f: f, chain: evidence.Resume(last), count: len(existing)}, nil
+	s := &FileStore{path: path, f: f, chain: evidence.Resume(last), count: len(existing)}
+	if len(existing) > 0 {
+		s.firstAt = existing[0].CollectedAt
+	}
+	return s, nil
 }
 
 func (s *FileStore) Append(r *evidence.Record) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	return s.appendLocked(r)
+}
+
+func (s *FileStore) appendLocked(r *evidence.Record) error {
 	if err := s.chain.Seal(r); err != nil {
 		return err
 	}
@@ -74,8 +89,64 @@ func (s *FileStore) Append(r *evidence.Record) error {
 	if err := s.f.Sync(); err != nil {
 		return fmt.Errorf("sync store: %w", err)
 	}
+	if s.count == 0 {
+		s.firstAt = r.CollectedAt
+	}
 	s.count++
 	return nil
+}
+
+// MaybeRotate archives the store and starts a fresh chain when the
+// oldest record is older than maxAge. The new chain's genesis is a
+// rotation record referencing the archived chain's head hash, so
+// continuity across segments stays verifiable for anyone holding both
+// files. Returns the archive path when rotation happened.
+func (s *FileStore) MaybeRotate(maxAge time.Duration, now time.Time) (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.count == 0 || s.firstAt.IsZero() || now.Sub(s.firstAt) < maxAge {
+		return "", nil
+	}
+
+	prevHead := s.chain.LastHash()
+	prevCount := s.count
+	if err := s.f.Close(); err != nil {
+		return "", fmt.Errorf("close store for rotation: %w", err)
+	}
+	ext := filepath.Ext(s.path)
+	archive := strings.TrimSuffix(s.path, ext) + "-" + now.UTC().Format("20060102-150405Z") + ext
+	if err := os.Rename(s.path, archive); err != nil {
+		return "", fmt.Errorf("archive store: %w", err)
+	}
+	f, err := os.OpenFile(s.path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600) // #nosec G304 -- derived from configured path
+	if err != nil {
+		return "", fmt.Errorf("open rotated store: %w", err)
+	}
+	s.f = f
+	s.chain = evidence.NewChain()
+	s.count = 0
+	s.firstAt = time.Time{}
+
+	obs, err := json.Marshal(map[string]any{
+		"previousChainHead":    prevHead,
+		"previousChainRecords": prevCount,
+		"archivedTo":           filepath.Base(archive),
+	})
+	if err != nil {
+		return "", err
+	}
+	rotation := evidence.Record{
+		CollectorID:      "evidenced",
+		CollectorVersion: "1",
+		Target:           evidence.Target{Type: TargetTypeChainRotation, Name: filepath.Base(archive)},
+		CollectedAt:      now.UTC(),
+		Outcome:          evidence.OutcomeObserved,
+		Observation:      obs,
+	}
+	if err := s.appendLocked(&rotation); err != nil {
+		return "", fmt.Errorf("write rotation record: %w", err)
+	}
+	return archive, nil
 }
 
 func (s *FileStore) All() ([]evidence.Record, error) {

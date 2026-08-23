@@ -40,6 +40,9 @@ spec:
                   description: Interval between collection cycles (Go duration, min 1m, default 1h).
                 storePath:
                   type: string
+                storeRotateAfter:
+                  type: string
+                  description: Chain rotation age (Go duration, min 24h, default 720h).
                 exportDir:
                   type: string
                 signingKeyPath:
